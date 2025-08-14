@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desktop To-Do Widget</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+        .widget-shadow {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body style="background-color: #f8f8f6;" class="min-h-screen p-4">
+    <div id="mainWidget" class="max-w-2xl mx-auto rounded-2xl widget-shadow p-6" style="background-color: #e8dcc2; border: 2px solid #d6d1cd;">
+        <!-- Control Buttons -->
+        <div class="flex justify-end mb-4 space-x-2">
+            <button onclick="minimizeWidget()" class="w-8 h-8 flex items-center justify-center text-lg font-bold hover:opacity-70" style="background: none; border: none; color: #d6ceb8;" title="Minimize">➖</button>
+            <button onclick="closeWidget()" class="w-8 h-8 flex items-center justify-center text-lg font-bold hover:opacity-70" style="background: none; border: none; color: #d6ceb8;" title="Close">✖️</button>
+        </div>
+        
+        <!-- Date and Time -->
+        <div class="text-center mb-6 rounded-xl p-4" style="background-color: #f8f8f6; border: 2px solid #d6d1cd; color: #4a4a4a;">
+            <div id="currentDate" class="text-lg font-semibold mb-1"></div>
+            <div class="flex items-center justify-center space-x-4">
+                <div class="text-2xl font-bold">
+                    <span id="currentTime"></span>
+                    <span id="workTimeLeft" class="text-lg ml-2"></span>
+                </div>
+                <div class="flex items-center space-x-2 text-sm">
+                    <span>End Time:</span>
+                    <button onclick="showTimeSelector()" id="endTimeButton" class="p-1 rounded text-xs w-20 hover:bg-opacity-80" style="background-color: #8b7355; color: #f8f8f6; border: 1px solid #d6d1cd;">18:00</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- D-Day Setting -->
+        <div class="mb-6 rounded-xl p-4" style="background-color: #f8f8f6; border: 2px solid #d6d1cd;">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3 flex-1">
+                    <span class="font-semibold" style="color: #6b5b47;">D-Day:</span>
+                    <input type="date" id="ddayInput" class="p-2 rounded-lg flex-1" style="background-color: #f8f8f6; border: 1px solid #d6d1cd; color: #4a4a4a;">
+                    <input type="text" id="ddayTitle" placeholder="Event Title" class="p-2 rounded-lg flex-1" style="background-color: #f8f8f6; border: 1px solid #d6d1cd; color: #4a4a4a;">
+                    <button onclick="setDday()" class="px-4 py-2 rounded-lg font-semibold" style="background-color: #8b7355; color: #f8f8f6;" onmouseover="this.style.backgroundColor='#6b5b47'" onmouseout="this.style.backgroundColor='#8b7355'">Set</button>
+                </div>
+                <div id="ddayDisplay" class="ml-4 font-bold" style="color: #6b5b47;"></div>
+            </div>
+        </div>
+
+        <!-- Checklist Sections -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Daily Tasks -->
+            <div class="rounded-lg p-4 h-96" style="background-color: #f8f8f6; border: 2px solid #d6d1cd;">
+                <h3 class="font-semibold mb-3 flex items-center" style="color: #4a4a4a;">
+                    <span class="mr-2">📅</span>Daily Tasks
+                </h3>
+                <div class="mb-3">
+                    <input type="text" id="dailyTaskInput" placeholder="Add daily task" class="w-full p-2 rounded-lg" style="background-color: #f8f8f6; border: 1px solid #d6d1cd; color: #4a4a4a;">
+                    <button onclick="addDailyTask()" class="w-full mt-2 py-2 rounded-lg font-semibold" style="background-color: #8b7355; color: #f8f8f6;" onmouseover="this.style.backgroundColor='#6b5b47'" onmouseout="this.style.backgroundColor='#8b7355'">Add</button>
+                </div>
+                <div id="dailyTasks" class="space-y-2 overflow-y-auto" style="max-height: 200px;"></div>
+            </div>
+
+            <!-- Additional Tasks -->
+            <div class="rounded-lg p-4 h-96" style="background-color: #f8f8f6; border: 2px solid #d6d1cd;">
+                <h3 class="font-semibold mb-3 flex items-center" style="color: #4a4a4a;">
+                    <span class="mr-2">⚡</span>Additional Tasks
+                </h3>
+                <div class="mb-3">
+                    <input type="text" id="tempTaskInput" placeholder="Add additional task" class="w-full p-2 rounded-lg mb-2" style="background-color: #f8f8f6; border: 1px solid #d6d1cd; color: #4a4a4a;">
+                    <input type="date" id="tempTaskDeadline" class="w-full p-2 rounded-lg" style="background-color: #f8f8f6; border: 1px solid #d6d1cd; color: #4a4a4a;">
+                    <button onclick="addTempTask()" class="w-full mt-2 py-2 rounded-lg font-semibold" style="background-color: #8b7355; color: #f8f8f6;" onmouseover="this.style.backgroundColor='#6b5b47'" onmouseout="this.style.backgroundColor='#8b7355'">Add</button>
+                </div>
+                <div id="tempTasks" class="space-y-2 overflow-y-auto" style="max-height: 200px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minimized Widget -->
+    <div id="minimizedWidget" class="fixed bottom-4 right-4 rounded-xl widget-shadow p-3 cursor-pointer hidden" style="background-color: #e8dcc2; border: 2px solid #d6d1cd;" onclick="restoreWidget()">
+        <div class="flex items-center space-x-2">
+            <span class="text-sm font-semibold" style="color: #4a4a4a;">📋 To-Do Widget</span>
+            <span id="minimizedTime" class="text-xs" style="color: #6b5b47;"></span>
+        </div>
+    </div>
+
+    <!-- Widget Closed Message -->
+    <div id="closedMessage" class="fixed top-4 right-4 rounded-xl widget-shadow p-4 hidden" style="background-color: #e8dcc2; border: 2px solid #d6d1cd;">
+        <div class="text-center">
+            <p class="text-sm font-semibold mb-2" style="color: #4a4a4a;">Widget Closed</p>
+            <button onclick="restoreWidget()" class="px-3 py-1 rounded-lg text-xs font-semibold" style="background-color: #8b7355; color: #f8f8f6;" onmouseover="this.style.backgroundColor='#6b5b47'" onmouseout="this.style.backgroundColor='#8b7355'">Restore</button>
+        </div>
+    </div>
+
+    <!-- Time Selector Popup -->
+    <div id="timeSelector" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden" onclick="hideTimeSelector()">
+        <div class="rounded-xl widget-shadow p-6" style="background-color: #e8dcc2; border: 2px solid #d6d1cd;" onclick="event.stopPropagation()">
+            <h3 class="text-lg font-semibold mb-4 text-center" style="color: #4a4a4a;">Set End Time</h3>
+            <div class="flex items-center justify-center space-x-4 mb-4">
+                <div class="text-center">
+                    <label class="block text-sm font-medium mb-2" style="color: #6b5b47;">Hour</label>
+                    <select id="hourSelect" class="p-2 rounded-lg text-center" style="background-color: #f8f8f6; border: 1px solid #d6d1cd; color: #4a4a4a;">
+                        <option value="09">09</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18" selected>18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                        <option value="21">21</option>
+                        <option value="22">22</option>
+                    </select>
+                </div>
+                <div class="text-center">
+                    <label class="block text-sm font-medium mb-2" style="color: #6b5b47;">Minute</label>
+                    <select id="minuteSelect" class="p-2 rounded-lg text-center" style="background-color: #f8f8f6; border: 1px solid #d6d1cd; color: #4a4a4a;">
+                        <option value="00" selected>00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="setEndTime()" class="flex-1 py-2 rounded-lg font-semibold" style="background-color: #8b7355; color: #f8f8f6;" onmouseover="this.style.backgroundColor='#6b5b47'" onmouseout="this.style.backgroundColor='#8b7355'">Set</button>
+                <button onclick="hideTimeSelector()" class="flex-1 py-2 rounded-lg font-semibold" style="background-color: #d6d1cd; color: #4a4a4a;" onmouseover="this.style.backgroundColor='#c5bfbb'" onmouseout="this.style.backgroundColor='#d6d1cd'">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Local storage keys
+        const DAILY_TASKS_KEY = 'dailyTasks';
+        const TEMP_TASKS_KEY = 'tempTasks';
+        const DDAY_KEY = 'ddayData';
+        const LAST_RESET_KEY = 'lastReset';
+
+        // Load data
+        let dailyTasks = JSON.parse(localStorage.getItem(DAILY_TASKS_KEY)) || [];
+        let tempTasks = JSON.parse(localStorage.getItem(TEMP_TASKS_KEY)) || [];
+        let ddayData = JSON.parse(localStorage.getItem(DDAY_KEY)) || null;
+        let workEndTime = localStorage.getItem('workEndTime') || '18:00';
+
+        // Widget control functions
+        function minimizeWidget() {
+            document.getElementById('mainWidget').classList.add('hidden');
+            document.getElementById('minimizedWidget').classList.remove('hidden');
+        }
+
+        function closeWidget() {
+            document.getElementById('mainWidget').classList.add('hidden');
+            document.getElementById('closedMessage').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('closedMessage').classList.add('hidden');
+            }, 3000);
+        }
+
+        function restoreWidget() {
+            document.getElementById('mainWidget').classList.remove('hidden');
+            document.getElementById('minimizedWidget').classList.add('hidden');
+            document.getElementById('closedMessage').classList.add('hidden');
+        }
+
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            const timeStr = now.toLocaleTimeString('en-US', {
+                hour12: true,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            document.getElementById('currentDate').textContent = dateStr;
+            document.getElementById('currentTime').textContent = timeStr;
+
+            // Update minimized widget time
+            const shortTimeStr = now.toLocaleTimeString('en-US', {
+                hour12: true,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('minimizedTime').textContent = shortTimeStr;
+
+            // Calculate time left until end of work
+            updateWorkTimeLeft(now);
+            
+            // Update D-Day
+            updateDdayDisplay();
+        }
+
+        // Calculate time left until end of work
+        function updateWorkTimeLeft(now) {
+            const [endHour, endMinute] = workEndTime.split(':').map(Number);
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const currentSecond = now.getSeconds();
+
+            if (currentHour < 9) {
+                // Before work starts
+                const startTime = new Date(now);
+                startTime.setHours(9, 0, 0, 0);
+                const diff = startTime - now;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                document.getElementById('workTimeLeft').textContent = `(Work starts in ${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')})`;
+            } else if (currentHour < endHour || (currentHour === endHour && currentMinute < endMinute)) {
+                // During work hours
+                const endTime = new Date(now);
+                endTime.setHours(endHour, endMinute, 0, 0);
+                const diff = endTime - now;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                document.getElementById('workTimeLeft').textContent = `(${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} until end)`;
+            } else {
+                // After work
+                document.getElementById('workTimeLeft').textContent = '(Great work today! 🎉)';
+            }
+        }
+
+        // Time selector functions
+        function showTimeSelector() {
+            const [hour, minute] = workEndTime.split(':');
+            document.getElementById('hourSelect').value = hour;
+            document.getElementById('minuteSelect').value = minute;
+            document.getElementById('timeSelector').classList.remove('hidden');
+        }
+
+        function hideTimeSelector() {
+            document.getElementById('timeSelector').classList.add('hidden');
+        }
+
+        function setEndTime() {
+            const hour = document.getElementById('hourSelect').value;
+            const minute = document.getElementById('minuteSelect').value;
+            workEndTime = `${hour}:${minute}`;
+            document.getElementById('endTimeButton').textContent = workEndTime;
+            localStorage.setItem('workEndTime', workEndTime);
+            hideTimeSelector();
+        }
+
+        // Set D-Day
+        function setDday() {
+            const date = document.getElementById('ddayInput').value;
+            const title = document.getElementById('ddayTitle').value;
+            
+            if (date && title) {
+                ddayData = { date, title };
+                localStorage.setItem(DDAY_KEY, JSON.stringify(ddayData));
+                updateDdayDisplay();
+            }
+        }
+
+        // Update D-Day display
+        function updateDdayDisplay() {
+            const display = document.getElementById('ddayDisplay');
+            if (ddayData) {
+                const targetDate = new Date(ddayData.date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                targetDate.setHours(0, 0, 0, 0);
+                
+                const diffTime = targetDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays > 0) {
+                    display.textContent = `${ddayData.title} D-${diffDays}`;
+                    display.className = 'mt-2 text-center font-semibold text-blue-600';
+                } else if (diffDays === 0) {
+                    display.textContent = `${ddayData.title} D-Day!`;
+                    display.className = 'mt-2 text-center font-semibold text-red-600';
+                } else {
+                    display.textContent = `${ddayData.title} D+${Math.abs(diffDays)}`;
+                    display.className = 'mt-2 text-center font-semibold text-gray-600';
+                }
+            }
+        }
+
+        // Add daily task
+        function addDailyTask() {
+            const input = document.getElementById('dailyTaskInput');
+            const task = input.value.trim();
+            if (task) {
+                dailyTasks.push({ id: Date.now(), text: task, completed: false });
+                input.value = '';
+                saveDailyTasks();
+                renderDailyTasks();
+            }
+        }
+
+        // Add temporary task
+        function addTempTask() {
+            const input = document.getElementById('tempTaskInput');
+            const deadlineInput = document.getElementById('tempTaskDeadline');
+            const task = input.value.trim();
+            const deadline = deadlineInput.value;
+            
+            if (task) {
+                tempTasks.push({ 
+                    id: Date.now(), 
+                    text: task, 
+                    completed: false, 
+                    deadline: deadline,
+                    createdDate: new Date().toDateString()
+                });
+                input.value = '';
+                deadlineInput.value = '';
+                saveTempTasks();
+                renderTempTasks();
+            }
+        }
+
+        // Render daily tasks
+        function renderDailyTasks() {
+            const container = document.getElementById('dailyTasks');
+            container.innerHTML = '';
+            
+            dailyTasks.forEach(task => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2';
+                div.innerHTML = `
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                           onchange="toggleDailyTask(${task.id})" 
+                           class="w-4 h-4 text-blue-600 rounded">
+                    <span class="${task.completed ? 'completed' : ''} flex-1" style="color: #4a4a4a;">${task.text}</span>
+                    <button onclick="deleteDailyTask(${task.id})" class="text-red-500 hover:text-red-700">🗑️</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Render temporary tasks
+        function renderTempTasks() {
+            const container = document.getElementById('tempTasks');
+            container.innerHTML = '';
+            
+            // Sort by deadline (closest first, no deadline at bottom)
+            const sortedTasks = [...tempTasks].sort((a, b) => {
+                if (!a.deadline && !b.deadline) return 0;
+                if (!a.deadline) return 1;
+                if (!b.deadline) return -1;
+                return new Date(a.deadline) - new Date(b.deadline);
+            });
+            
+            sortedTasks.forEach(task => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2';
+                
+                let deadlineText = '';
+                if (task.deadline) {
+                    const deadline = new Date(task.deadline);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    deadline.setHours(0, 0, 0, 0);
+                    
+                    const diffTime = deadline - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 0) {
+                        deadlineText = `<span class="text-xs text-blue-600">D-${diffDays}</span>`;
+                    } else if (diffDays === 0) {
+                        deadlineText = `<span class="text-xs text-red-600">Today!</span>`;
+                    } else {
+                        deadlineText = `<span class="text-xs text-red-600">D+${Math.abs(diffDays)}</span>`;
+                    }
+                }
+                
+                div.innerHTML = `
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                           onchange="toggleTempTask(${task.id})" 
+                           class="w-4 h-4 text-green-600 rounded">
+                    <span class="${task.completed ? 'completed' : ''} flex-1" style="color: #4a4a4a;">${task.text}</span>
+                    ${deadlineText}
+                    <button onclick="deleteTempTask(${task.id})" class="text-red-500 hover:text-red-700">🗑️</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Toggle checkbox functions
+        function toggleDailyTask(id) {
+            const task = dailyTasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveDailyTasks();
+                renderDailyTasks();
+            }
+        }
+
+        function toggleTempTask(id) {
+            const task = tempTasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTempTasks();
+                renderTempTasks();
+            }
+        }
+
+        // Delete functions
+        function deleteDailyTask(id) {
+            dailyTasks = dailyTasks.filter(t => t.id !== id);
+            saveDailyTasks();
+            renderDailyTasks();
+        }
+
+        function deleteTempTask(id) {
+            tempTasks = tempTasks.filter(t => t.id !== id);
+            saveTempTasks();
+            renderTempTasks();
+        }
+
+        // Save functions
+        function saveDailyTasks() {
+            localStorage.setItem(DAILY_TASKS_KEY, JSON.stringify(dailyTasks));
+        }
+
+        function saveTempTasks() {
+            localStorage.setItem(TEMP_TASKS_KEY, JSON.stringify(tempTasks));
+        }
+
+        // Check date reset
+        function checkDateReset() {
+            const today = new Date().toDateString();
+            const lastReset = localStorage.getItem(LAST_RESET_KEY);
+            
+            if (lastReset !== today) {
+                // Uncheck daily tasks
+                dailyTasks.forEach(task => task.completed = false);
+                saveDailyTasks();
+                
+                // Remove completed temporary tasks
+                tempTasks = tempTasks.filter(task => !task.completed || task.createdDate === today);
+                saveTempTasks();
+                
+                localStorage.setItem(LAST_RESET_KEY, today);
+            }
+        }
+
+        // Initialize
+        function init() {
+            checkDateReset();
+            updateTime();
+            renderDailyTasks();
+            renderTempTasks();
+            updateDdayDisplay();
+            
+            // Restore D-Day input fields
+            if (ddayData) {
+                document.getElementById('ddayInput').value = ddayData.date;
+                document.getElementById('ddayTitle').value = ddayData.title;
+            }
+            
+            // Restore work end time setting
+            document.getElementById('endTimeButton').textContent = workEndTime;
+        }
+
+        // Add enter key events
+        document.getElementById('dailyTaskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addDailyTask();
+        });
+
+        document.getElementById('tempTaskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addTempTask();
+        });
+
+        // Update time every second
+        setInterval(updateTime, 1000);
+        
+        // Initialize on page load
+        init();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96ee2857706cea26',t:'MTc1NTE1MDQ0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
